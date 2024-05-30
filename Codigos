@@ -1,0 +1,359 @@
+xml
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="1.0"
+xmlns="http://java.sun.com/xml/ns/persistence"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://java.sun.com/xml/ns/persistence 
+http://java.sun.com/ xml/ns/persistence/persistence_1_0.xsd">
+<persistence-unit name="CadastroEE-ejbPU" transaction-type="JTA">
+<jta-data-source>jdbc/loja</jta-data-source>
+<exclude-unlisted-classes>false</exclude-unlisted-classes>
+<properties/>
+</persistence-unit>
+</persistence>
+
+`java
+import cadastroee.controller.ProdutoFacadeLocal; // Verifique o pacote 
+correto
+@EJB
+ProdutoFacadeLocal facade;
+
+java
+import java.io.IOException;
+import java.io.PrintWriter;
+import javax.ejb.EJB;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.List;
+import cadastroee.model.Produto; // Verifique o pacote correto
+@WebServlet(name = "ServletProduto", urlPatterns = 
+{"/ServletProduto"})
+public class ServletProduto extends HttpServlet {
+ @EJB
+ ProdutoFacadeLocal facade;
+ @Override
+ protected void doGet(HttpServletRequest request, 
+HttpServletResponse response)
+ throws ServletException, IOException {
+ response.setContentType("text/html;charset=UTF-8");
+ try (PrintWriter out = response.getWriter()) {
+ out.println("<html>");
+ out.println("<head>");
+ out.println("<title>Produtos</title>");
+ out.println("</head>");
+ out.println("<body>");
+ out.println("<h1>Lista de Produtos</h1>");
+ out.println("<ul>");
+ List<Produto> produtos = facade.findAll();
+ for (Produto produto : produtos) {
+ out.println("<li>" + produto.getNome() + "</li>");
+ }
+ out.println("</ul>");
+ out.println("</body>");
+ out.println("</html>");
+ }
+ }
+}
+
+xml
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="4.0" xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee 
+http://xmlns.jcp.org/xml/ns/ javaee/web-app_4_0.xsd">
+ <servlet>
+ <servlet-name>ServletProduto</servlet-name>
+ <servlet-class>cadastroee.servlets.ServletProduto</servletclass>
+ </servlet>
+ <servlet>
+ <servlet-name>ServletProdutoFC</servlet-name>
+ <servlet-class>cadastroee.servlets.ServletProdutoFC</servletclass>
+ </servlet>
+ <session-config>
+ <session-timeout>30</session-timeout>
+ </session-config>
+</web-app>
+
+
+java
+import cadastroee.controller.ProdutoFacadeLocal; // Verifique o pacote 
+correto
+import java.io.IOException;
+import javax.ejb.EJB;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+@WebServlet(name = "ServletProdutoFC", urlPatterns = 
+{"/ServletProdutoFC"})
+public class ServletProdutoFC extends HttpServlet {
+ @EJB
+ ProdutoFacadeLocal facade;
+ protected void processRequest(HttpServletRequest request, 
+HttpServletResponse response)
+ throws ServletException, IOException {
+ String acao = request.getParameter("acao");
+ String destino = "";
+ if (acao != null) {
+ switch (acao) {
+ case "listar":
+ request.setAttribute("produtos", 
+facade.findAll());
+ destino = "ProdutoLista.jsp";
+ break;
+ case "formIncluir":
+ destino = "ProdutoDados.jsp";
+ break;
+ case "formAlterar":
+ // Capturar o id fornecido como parâmetro do 
+request
+ // Consultar a entidade via facade e adicionar 
+como atributo da requisição
+ // Redirecionar para o formulário de alteração
+ break;
+ case "excluir":
+ // Capturar o id fornecido como parâmetro do 
+request
+ // Remover a entidade via facade
+ // Atualizar a lista de produtos
+ // Redirecionar para a página de lista
+ break;
+ case "alterar":
+ // Capturar o id fornecido como parâmetro do 
+request
+ // Consultar a entidade via facade
+ // Preencher os demais campos com os valores 
+fornecidos no request
+ // Alterar os dados via facade
+ // Atualizar a lista de produtos
+ // Redirecionar para a página de lista
+ break;
+ case "incluir":
+ // Instanciar uma entidade do tipo Produto
+ // Preencher os campos com os valores fornecidos 
+no request
+ // Inserir via facade
+ // Atualizar a lista de produtos
+ // Redirecionar para a página de lista
+ break;
+ }
+ }
+ request.getRequestDispatcher(destino).forward(request, 
+response);
+ }
+ @Override
+ protected void doGet(HttpServletRequest request, 
+HttpServletResponse response)
+ throws ServletException, IOException {
+ processRequest(request, response);
+ }
+ @Override
+ protected void doPost(HttpServletRequest request, 
+HttpServletResponse response)
+ throws ServletException, IOException {
+ processRequest(request, response);
+ }
+}
+
+jsp
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+ <head>
+ <meta charset="UTF-8">
+ <title>Lista de Produtos</title>
+ </head>
+ <body>
+ <h1>Lista de Produtos</h1>
+ <table border="1">
+ <tr>
+ <th>ID</th>
+ <th>Nome</th>
+ <th>Quantidade</th>
+ <th>Preço</th>
+ <th>Ações</th>
+ </tr>
+ <%-- Recuperar a lista de produtos enviada pelo Servlet --
+%>
+ <%
+ java.util.List<cadastroee.model.Produto> produtos = 
+(java.util.List<cadastroee.model.Produto>) 
+request.getAttribute("produtos");
+ for (cadastroee.model.Produto produto : produtos) {
+ %>
+ <tr>
+ <td><%= produto.getId() %></td>
+ <td><%= produto.getNome() %></td>
+ <td><%= produto.getQuantidade() %></td>
+ <td><%= produto.getPreco() %></td>
+ <td>
+ <a href="ServletProdutoFC?acao=formAlterar&id=<%= 
+produto.getId() %>">Alterar</a>
+ <a href="ServletProdutoFC?acao=excluir&id=<%= 
+produto.getId() %>">Excluir</a>
+ </td>
+ </tr>
+ <% } %>
+ </table>
+ <a href="ServletProdutoFC?acao=formIncluir">Incluir Novo 
+Produto</a>
+ </body>
+</html>
+
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+ <head>
+ <meta charset="UTF-8">
+ <title>Cadastro de Produto</title>
+ </head>
+ <body>
+ <h1>Cadastro de Produto</h1>
+ <form action="ServletProdutoFC" method="post">
+ <%-- Recuperar a entidade enviada pelo Servlet --%>
+ <% cadastroee.model.Produto produto = 
+(cadastroee.model.Produto) request.getAttribute("produto"); %>
+ 
+ <%-- Definir a variável acao --%>
+ <% String acao = (produto == null) ? "incluir" : 
+"alterar"; %>
+ 
+ <%-- Incluir um campo hidden para envio do valor de acao -
+-%>
+ <input type="hidden" name="acao" value="<%= acao %>">
+ 
+ <%-- Incluir um campo hidden para envio do id --%>
+ <% if (acao.equals("alterar")) { %>
+ <input type="hidden" name="id" value="<%= 
+produto.getId() %>">
+ <% } %>
+ 
+ <%-- Incluir os campos para nome, quantidade e preço de 
+venda --%>
+ Nome: <input type="text" name="nome" value="<%= (produto 
+!= null) ? produto.getNome() : "" %>"><br>
+ Quantidade: <input type="text" name="quantidade" 
+value="<%= (produto != null) ? produto.getQuantidade() : "" %>"><br>
+ Preço de Venda: <input type="text" name="precoVenda"
+value="<%= (produto != null) ? produto.getPrecoVenda() : "" %>"><br>
+ 
+ <%-- Concluir o formulário com um botão de envio --%>
+ <input type="submit" value="<%= (acao.equals("incluir")) ? 
+"Incluir" : "Alterar" %>">
+ </form>
+ </body>
+</html>
+
+jsp
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+ <head>
+ <meta charset="UTF-8">
+ <title>Lista de Produtos</title>
+ <!-- Incluir Bootstrap via CDN -->
+ <link rel="stylesheet" 
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-
+alpha1/dist/css/bootstrap.min.css">
+ </head>
+ <body>
+ <div class="container">
+ <h1>Lista de Produtos</h1>
+ <table class="table table-striped">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>Nome</th>
+ <th>Quantidade</th>
+ <th>Preço</th>
+ <th>Ações</th>
+ </tr>
+ </thead>
+ <tbody>
+ <!-- Recuperar a lista de produtos enviada pelo 
+Servlet -->
+ <% java.util.List<cadastroee.model.Produto> 
+produtos = (java.util.List<cadastroee.model.Produto>) 
+request.getAttribute("produtos");
+ for (cadastroee.model.Produto produto : produtos) 
+{ %>
+ <tr>
+ <td><%= produto.getId() %></td>
+ <td><%= produto.getNome() %></td>
+ <td><%= produto.getQuantidade() %></td>
+ <td><%= produto.getPreco() %></td>
+ <td>
+ <a 
+href="ServletProdutoFC?acao=formAlterar&id=<%= produto.getId() %>" 
+class="btn btn-primary">Alterar</a>
+ <a 
+href="ServletProdutoFC?acao=excluir&id=<%= produto.getId() %>" 
+class="btn btn-danger">Excluir</a>
+ </td>
+ </tr>
+ <% } %>
+ </tbody>
+ </table>
+ <a href="ServletProdutoFC?acao=formIncluir" class="btn 
+btn-success">Incluir Novo Produto</a>
+ </div>
+ </body>
+</html>
+
+jsp
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+ <head>
+ <meta charset="UTF-8">
+ <title>Cadastro de Produto</title>
+ <!-- Incluir Bootstrap via CDN -->
+ <link rel="stylesheet" 
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-
+alpha1/dist/css/bootstrap.min.css">
+ </head>
+ <body>
+ <div class="container">
+ <h1>Cadastro de Produto</h1>
+ <form action="ServletProdutoFC" method="post">
+ <% cadastroee.model.Produto produto = 
+(cadastroee.model.Produto) request.getAttribute("produto"); %>
+ <% String acao = (produto == null) ? "incluir" : 
+"alterar"; %>
+ <input type="hidden" name="acao" value="<%= acao %>">
+ <% if (acao.equals("alterar")) { %>
+ <input type="hidden" name="id" value="<%= 
+produto.getId() %>">
+ <% } %>
+ <div class="mb-3">
+ <label for="nome" class="form-label">Nome:</label>
+ <input type="text" name="nome" id="nome" 
+class="form-control" value="<%= (produto != null) ? produto.getNome() 
+: "" %>">
+ </div>
+ <div class="mb-3">
+ <label for="quantidade" class="formlabel">Quantidade:</label>
+ <input type="text" name="quantidade" 
+id="quantidade" class="form-control" value="<%= (produto != null) ? 
+produto.getQuantidade() : "" %>">
+ </div>
+ <div class="mb-3">
+ <label for="precoVenda" class="form-label">Preço 
+de Venda:</label>
+ <input type="text" name="precoVenda" 
+id="precoVenda" class="form-control" value="<%= (produto != null) ? 
+produto.getPrecoVenda() : "" %>">
+ </div>
+ <button type="submit" class="btn btn-primary"><%= 
+(acao.equals("incluir")) ? "Incluir" : "Alterar" %></button>
+ </form>
+ </div>
+ </body>
+</html>
+
+
+
